@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "node-fetch": "^2.7.0",
-    "formidable": "^3.5.1"
+    "formidable": "^3.5.1",
+    "form-data": "^4.0.0"
   },
   "engines": {
     "node": ">=18.x"
