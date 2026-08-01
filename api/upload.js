@@ -3,14 +3,15 @@
 // GitHub Repository menggunakan GitHub Contents API. Token GitHub HANYA
 // dibaca dari process.env.GITHUB_TOKEN dan tidak pernah dikirim ke client.
 
-const { formidable } = require("formidable");  // v3: named export
+const { formidable } = require("formidable");
+const { Writable } = require("stream");
 const fs = require("fs");
 const crypto = require("crypto");
 const fetch = require("node-fetch");
 
 export const config = {
   api: {
-    bodyParser: false, // kita pakai formidable untuk multipart/form-data
+    bodyParser: false,
   },
 };
 
@@ -22,38 +23,25 @@ const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE_BYTES = 20 * 1024 * 1024; // 20MB
 
-// ---------------------------------------------------------------------
-// Simple in-memory rate limiter (per serverless instance).
-// Cukup untuk mencegah spam kasar; untuk produksi skala besar gunakan
-// layanan eksternal seperti Upstash/Redis.
-// ---------------------------------------------------------------------
 const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX || "10", 10);
-const RATE_LIMIT_WINDOW_MS = parseInt(
-  process.env.RATE_LIMIT_WINDOW_MS || "60000",
-  10
-);
+const RATE_LIMIT_WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW_MS || "60000", 10);
 const rateLimitStore = global.__zalyst_rate_limit__ || new Map();
 global.__zalyst_rate_limit__ = rateLimitStore;
 
 function isRateLimited(ip) {
   const now = Date.now();
   const entry = rateLimitStore.get(ip) || { count: 0, windowStart: now };
-
   if (now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
     entry.count = 0;
     entry.windowStart = now;
   }
-
   entry.count += 1;
   rateLimitStore.set(ip, entry);
-
   return entry.count > RATE_LIMIT_MAX;
 }
 
 function sanitizeFileName(originalName) {
-  const ext = (originalName.split(".").pop() || "jpg")
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
+  const ext = (originalName.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
   const safeExt = ["jpg", "jpeg", "png", "webp"].includes(ext) ? ext : "jpg";
   const uuid = crypto.randomUUID();
   const timestamp = Date.now();
@@ -67,9 +55,7 @@ function getClientIp(req) {
 }
 
 async function uploadToGitHub(fileBuffer, fileName) {
-  if (!GITHUB_TOKEN) {
-    throw new Error("SERVER_MISCONFIGURED_NO_TOKEN");
-  }
+  if (!GITHUB_TOKEN) throw new Error("SERVER_MISCONFIGURED_NO_TOKEN");
 
   const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/uploads/${fileName}`;
   const contentBase64 = fileBuffer.toString("base64");
@@ -95,8 +81,20 @@ async function uploadToGitHub(fileBuffer, fileName) {
     throw new Error(`GITHUB_UPLOAD_FAILED: ${response.status} ${errText}`);
   }
 
-  const rawUrl = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/uploads/${fileName}`;
-  return rawUrl;
+  return `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/uploads/${fileName}`;
+}
+
+// Custom Writable stream for formidable v3 fileWriteStreamHandler
+function createMemoryWritable() {
+  const chunks = [];
+  const writable = new Writable({
+    write(chunk, encoding, callback) {
+      chunks.push(chunk);
+      callback();
+    },
+  });
+  writable.getBuffer = () => Buffer.concat(chunks);
+  return writable;
 }
 
 function parseForm(req) {
@@ -104,14 +102,8 @@ function parseForm(req) {
     const form = formidable({
       maxFileSize: MAX_SIZE_BYTES,
       multiples: false,
-      // Vercel serverless: gunakan memory storage, bukan disk
-      fileWriteStreamHandler: () => {
-        const chunks = [];
-        return {
-          write: (chunk) => chunks.push(chunk),
-          end: () => Buffer.concat(chunks),
-        };
-      },
+      // Proper writable stream for Vercel (memory-based)
+      fileWriteStreamHandler: () => createMemoryWritable(),
     });
     form.parse(req, (err, fields, files) => {
       if (err) {
@@ -152,7 +144,7 @@ module.exports = async function handler(req, res) {
     console.log("Upload: parsing form...");
     const { files } = await parseForm(req);
     console.log("Upload: files parsed", Object.keys(files));
-    
+
     const fileField = files.image;
     const file = Array.isArray(fileField) ? fileField[0] : fileField;
 
@@ -181,9 +173,11 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    // Handle both file path (disk) and buffer (memory)
+    // Get buffer from formidable's internal stream
     let buffer;
-    if (file.filepath && fs.existsSync(file.filepath)) {
+    if (file._writeStream && typeof file._writeStream.getBuffer === "function") {
+      buffer = file._writeStream.getBuffer();
+    } else if (file.filepath && fs.existsSync(file.filepath)) {
       buffer = fs.readFileSync(file.filepath);
     } else if (file.buffer) {
       buffer = file.buffer;
