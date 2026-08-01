@@ -507,9 +507,9 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 
 /* ===================== LIGHTBOX ===================== */
 .lightbox {
+  display: none;  /* default hidden, JS akan ganti jadi grid */
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.9);
-  display: grid;
   place-items: center;
   z-index: 100;
   padding: 30px;

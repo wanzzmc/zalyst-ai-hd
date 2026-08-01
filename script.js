@@ -360,11 +360,12 @@ compareAgainBtn.addEventListener('click', () => {
 // =========================================================
 function openLightbox(src) {
   lightboxImg.src = src;
+  lightbox.style.display = 'grid';
   lightbox.hidden = false;
 }
 zoomBtn.addEventListener('click', () => openLightbox(currentResultUrl || afterImg.src));
-lightboxClose.addEventListener('click', () => { lightbox.hidden = true; });
-lightbox.addEventListener('click', (e) => { if (e.target === lightbox) lightbox.hidden = true; });
+lightboxClose.addEventListener('click', () => { lightbox.style.display = 'none'; lightbox.hidden = true; });
+lightbox.addEventListener('click', (e) => { if (e.target === lightbox) { lightbox.style.display = 'none'; lightbox.hidden = true; } });
 
 fullscreenBtn.addEventListener('click', () => {
   const frame = document.getElementById('compareFrame');
