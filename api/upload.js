@@ -3,7 +3,7 @@
 // GitHub Repository menggunakan GitHub Contents API. Token GitHub HANYA
 // dibaca dari process.env.GITHUB_TOKEN dan tidak pernah dikirim ke client.
 
-const formidable = require("formidable");
+const { formidable } = require("formidable");  // v3: named export
 const fs = require("fs");
 const crypto = require("crypto");
 const fetch = require("node-fetch");
@@ -187,12 +187,8 @@ module.exports = async function handler(req, res) {
       buffer = fs.readFileSync(file.filepath);
     } else if (file.buffer) {
       buffer = file.buffer;
-    } else if (file[Symbol.for('nodejs.util.inspect.custom')]) {
-      // formidable v3 might store buffer differently
-      console.error("Upload: unknown file structure", Object.keys(file));
-      throw new Error("FILE_READ_ERROR");
     } else {
-      console.error("Upload: cannot read file", Object.keys(file));
+      console.error("Upload: cannot read file, keys:", Object.keys(file));
       throw new Error("FILE_READ_ERROR");
     }
 
