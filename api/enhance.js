@@ -11,27 +11,21 @@ const MODEL_ENDPOINTS = {
   hdv4: { url: "https://api-faa.my.id/faa/hdv4", param: "image" },
 };
 
-// Rate limiter sederhana (per instance), sama pola dengan upload.js
+// Rate limiter sederhana (per instance)
 const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX || "10", 10);
-const RATE_LIMIT_WINDOW_MS = parseInt(
-  process.env.RATE_LIMIT_WINDOW_MS || "60000",
-  10
-);
+const RATE_LIMIT_WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW_MS || "60000", 10);
 const rateLimitStore = global.__zalyst_rate_limit_enhance__ || new Map();
 global.__zalyst_rate_limit_enhance__ = rateLimitStore;
 
 function isRateLimited(ip) {
   const now = Date.now();
   const entry = rateLimitStore.get(ip) || { count: 0, windowStart: now };
-
   if (now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
     entry.count = 0;
     entry.windowStart = now;
   }
-
   entry.count += 1;
   rateLimitStore.set(ip, entry);
-
   return entry.count > RATE_LIMIT_MAX;
 }
 
@@ -60,6 +54,47 @@ function readJsonBody(req) {
     });
     req.on("error", reject);
   });
+}
+
+// Upload image to uguu.se (free, no auth, hotlink OK)
+async function uploadToUguu(imageUrl) {
+  try {
+    // Download image from source (GitHub, etc)
+    const imgResponse = await fetch(imageUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; ZalystAI/1.0)',
+        'Accept': 'image/*'
+      }
+    });
+    if (!imgResponse.ok) throw new Error(`Failed to download: ${imgResponse.status}`);
+    const buffer = await imgResponse.buffer();
+    
+    // Upload to uguu.se
+    const formData = new (require('form-data'))();
+    formData.append('file', buffer, { filename: 'image.jpg', contentType: 'image/jpeg' });
+    
+    const uploadResponse = await fetch('https://uguu.se/upload', {
+      method: 'POST',
+      body: formData,
+      headers: formData.getHeaders()
+    });
+    
+    if (!uploadResponse.ok) throw new Error(`Uguu upload failed: ${uploadResponse.status}`);
+    const data = await uploadResponse.json();
+    
+    if (data.success && data.files && data.files[0] && data.files[0].url) {
+      return data.files[0].url;
+    }
+    throw new Error('Uguu response missing URL');
+  } catch (err) {
+    console.error("uploadToUguu error:", err.message);
+    throw err;
+  }
+}
+
+// Check if URL is from GitHub raw (blocked by AI API)
+function isGithubRawUrl(url) {
+  return url.includes('raw.githubusercontent.com');
 }
 
 module.exports = async function handler(req, res) {
@@ -101,8 +136,24 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    let aiImageUrl = image;
+
+    // If GitHub URL, rehost to uguu.se first (AI API blocks GitHub raw URLs)
+    if (isGithubRawUrl(image)) {
+      console.log("Enhance: GitHub URL detected, rehosting to uguu.se...");
+      try {
+        aiImageUrl = await uploadToUguu(image);
+        console.log("Enhance: Rehosted to", aiImageUrl);
+      } catch (err) {
+        console.error("Enhance: Rehost failed, trying original URL:", err.message);
+        // Fallback: try original URL anyway
+      }
+    }
+
     const { url: endpoint, param } = MODEL_ENDPOINTS[model];
-    const apiUrl = `${endpoint}?${param}=${encodeURIComponent(image)}`;
+    const apiUrl = `${endpoint}?${param}=${encodeURIComponent(aiImageUrl)}`;
+
+    console.log("Enhance: Calling AI API:", model, apiUrl.substring(0, 100) + "...");
 
     const aiResponse = await fetch(apiUrl, { 
       method: "GET",
@@ -127,12 +178,10 @@ module.exports = async function handler(req, res) {
     let resultUrl = null;
 
     if (contentType.includes("application/json")) {
-      // API mengembalikan JSON error atau response
       const data = await aiResponse.json();
-      resultUrl = data.result || data.url || data.data?.url || data.image || null;
+      resultUrl = data.result || data.url || data.data?.url || data.image || data.result?.image_upscaled || null;
 
       if (!resultUrl) {
-        // Cek apakah JSON error response
         if (data.status === false && data.error) {
           res.status(502).json({
             success: false,
@@ -150,10 +199,8 @@ module.exports = async function handler(req, res) {
       }
     } else if (contentType.startsWith("image/")) {
       // API mengembalikan gambar langsung (binary) -> gunakan URL endpoint sebagai resultUrl
-      // Frontend bisa tampilkan gambar langsung dari URL ini
       resultUrl = apiUrl;
     } else {
-      // Unknown content type, coba baca sebagai text
       const text = await aiResponse.text().catch(() => "");
       console.error("Unknown AI response type:", contentType, text.substring(0, 200));
       res.status(502).json({
@@ -171,7 +218,7 @@ module.exports = async function handler(req, res) {
       resultUrl,
     });
   } catch (err) {
-    console.error("enhance.js error:", err.message);
+    console.error("enhance.js error:", err.message, err.stack);
 
     if (err.message === "BODY_TOO_LARGE") {
       res.status(413).json({ success: false, error: "BODY_TOO_LARGE" });
@@ -181,7 +228,7 @@ module.exports = async function handler(req, res) {
     res.status(500).json({
       success: false,
       error: "AI_PROCESSING_FAILED",
-      message: "Terjadi kesalahan saat memproses gambar.",
+      message: "Terjadi kesalahan saat memproses gambar: " + err.message,
     });
   }
 };
