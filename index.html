@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+<title>Zalyst AI HD — Pertajam Gambarmu dalam Hitungan Detik</title>
+<meta name="description" content="Zalyst AI HD Image Enhancer — unggah gambar, pilih model AI, dan unduh hasil HD-nya. Gratis, cepat, tanpa watermark." />
+<meta name="theme-color" content="#0B0F1A" />
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Zalyst AI HD Image Enhancer" />
+<meta property="og:description" content="Pertajam gambar burammu jadi HD dengan 4 model AI berbeda. Drag, drop, enhance, download." />
+<meta property="og:image" content="/assets/og-cover.png" />
+<meta property="og:url" content="/" />
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Zalyst AI HD Image Enhancer" />
+<meta name="twitter:description" content="Pertajam gambar burammu jadi HD dengan 4 model AI berbeda." />
+<meta name="twitter:image" content="/assets/og-cover.png" />
+
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+<link rel="manifest" href="/manifest.json" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ===================== NAVBAR ===================== -->
+<header class="nav">
+  <div class="nav__inner">
+    <a href="/" class="nav__logo">
+      <span class="nav__logo-mark">Z</span>
+      <span>ZALYST<em>AI HD</em></span>
+    </a>
+    <div class="nav__actions">
+      <button id="historyToggleBtn" class="btn btn--ghost" type="button" aria-label="Buka riwayat">
+        History
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ===================== HERO ===================== -->
+  <section class="hero" id="hero">
+    <div class="hero__grid">
+      <div class="hero__copy">
+        <span class="eyebrow">4 MODEL AI · UNLIMITED · TANPA WATERMARK</span>
+        <h1>Gambar buram jadi <span class="hero__highlight">tajam maksimal.</span></h1>
+        <p class="hero__sub">Seret fotomu ke bawah, pilih otak AI-nya, dan tekan satu tombol. Zalyst mengurus sisanya — dari upload sampai file HD siap unduh.</p>
+        <a href="#uploadSection" class="btn btn--primary btn--lg">
+          Mulai Enhance <span class="btn__arrow">→</span>
+        </a>
+      </div>
+      <div class="hero__art" aria-hidden="true">
+        <div class="hero__card hero__card--back"></div>
+        <div class="hero__card hero__card--front">
+          <div class="hero__scan"></div>
+          <span class="hero__tag">HD ✓</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== UPLOAD ===================== -->
+  <section class="section" id="uploadSection">
+    <h2 class="section__title"><span class="section__num">01</span> Unggah Gambar</h2>
+
+    <div class="upload-zone" id="uploadZone" tabindex="0" role="button" aria-label="Unggah gambar dengan klik, drag and drop, atau paste">
+      <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" hidden />
+      <div class="upload-zone__inner" id="uploadZoneEmpty">
+        <div class="upload-zone__icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 16V4M12 4l-5 5M12 4l5 5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <p class="upload-zone__title">Drag &amp; drop gambar di sini</p>
+        <p class="upload-zone__sub">atau klik untuk pilih file &nbsp;·&nbsp; atau paste (Ctrl+V)</p>
+        <p class="upload-zone__meta">JPG, PNG, WEBP — maksimal 20MB</p>
+      </div>
+
+      <div class="upload-zone__preview" id="uploadZonePreview" hidden>
+        <img id="previewImg" alt="Preview gambar yang diunggah" />
+        <button type="button" class="upload-zone__clear" id="clearImageBtn" aria-label="Hapus gambar">✕</button>
+      </div>
+    </div>
+
+    <!-- Model Selection -->
+    <div class="model-select" id="modelSelect">
+      <label class="model-card">
+        <input type="radio" name="aiModel" value="hdv1" checked />
+        <span class="model-card__inner">
+          <span class="model-card__name">AI HD V1</span>
+          <span class="model-card__desc">Meningkatkan kualitas gambar menjadi HD.</span>
+        </span>
+      </label>
+      <label class="model-card">
+        <input type="radio" name="aiModel" value="hdv2" />
+        <span class="model-card__inner">
+          <span class="model-card__name">AI HD V2</span>
+          <span class="model-card__desc">Teknologi ala Remini, lebih tajam &amp; realistis.</span>
+        </span>
+      </label>
+      <label class="model-card">
+        <input type="radio" name="aiModel" value="hdv3" />
+        <span class="model-card__inner">
+          <span class="model-card__name">AI HD V3</span>
+          <span class="model-card__desc">AI Upscale 4X Resolution.</span>
+        </span>
+      </label>
+      <label class="model-card">
+        <input type="radio" name="aiModel" value="hdv4" />
+        <span class="model-card__inner">
+          <span class="model-card__name">AI HD V4</span>
+          <span class="model-card__desc">AI Super Resolution.</span>
+        </span>
+      </label>
+    </div>
+
+    <button type="button" class="btn btn--primary btn--lg btn--block btn--ripple" id="enhanceBtn" disabled>
+      Enhance Image ⚡
+    </button>
+
+    <!-- Progress -->
+    <div class="progress-panel" id="progressPanel" hidden>
+      <div class="progress-panel__steps" id="progressSteps">
+        <div class="progress-step" data-step="upload"><span class="progress-step__dot"></span>Uploading Image...</div>
+        <div class="progress-step" data-step="uploaded"><span class="progress-step__dot"></span>Upload Complete</div>
+        <div class="progress-step" data-step="sending"><span class="progress-step__dot"></span>Sending Image to AI...</div>
+        <div class="progress-step" data-step="processing"><span class="progress-step__dot"></span>Processing AI...</div>
+        <div class="progress-step" data-step="almost"><span class="progress-step__dot"></span>Almost Finished...</div>
+        <div class="progress-step" data-step="done"><span class="progress-step__dot"></span>Done</div>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-bar__fill" id="progressFill"></div>
+      </div>
+      <div class="progress-panel__percent" id="progressPercent">0%</div>
+    </div>
+  </section>
+
+  <!-- ===================== RESULT ===================== -->
+  <section class="section" id="resultSection" hidden>
+    <h2 class="section__title"><span class="section__num">02</span> Before &amp; After</h2>
+
+    <div class="compare" id="compareWrap">
+      <div class="compare__frame" id="compareFrame">
+        <img src="" alt="Gambar sebelum" class="compare__img compare__img--before" id="beforeImg" />
+        <div class="compare__after-clip" id="afterClip">
+          <img src="" alt="Gambar sesudah" class="compare__img compare__img--after" id="afterImg" />
+        </div>
+        <div class="compare__handle" id="compareHandle">
+          <span class="compare__handle-grip">⇔</span>
+        </div>
+        <span class="compare__badge compare__badge--before">BEFORE</span>
+        <span class="compare__badge compare__badge--after">AFTER</span>
+      </div>
+      <input type="range" id="compareSlider" min="0" max="100" value="50" class="compare__slider" aria-label="Geser untuk membandingkan before dan after" />
+    </div>
+
+    <div class="result-tools">
+      <button class="btn btn--ghost" id="zoomBtn" type="button">🔍 Zoom</button>
+      <button class="btn btn--ghost" id="fullscreenBtn" type="button">⛶ Fullscreen</button>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="actions">
+      <button class="btn btn--download btn--ripple" id="downloadBtn" type="button">
+        ⬇ Download HD Image
+      </button>
+      <div class="actions__row">
+        <button class="btn btn--secondary" id="copyResultBtn" type="button">Copy Result URL</button>
+        <button class="btn btn--secondary" id="copyGithubBtn" type="button">Copy GitHub URL</button>
+        <button class="btn btn--secondary" id="openImageBtn" type="button">Open Image</button>
+        <button class="btn btn--secondary" id="compareAgainBtn" type="button">Compare Again</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== HISTORY ===================== -->
+  <section class="section" id="historySection">
+    <h2 class="section__title"><span class="section__num">03</span> History</h2>
+    <div class="history-grid" id="historyGrid">
+      <p class="history-empty" id="historyEmpty">Belum ada riwayat. Hasil enhance kamu akan muncul di sini.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <p>Zalyst AI HD Image Enhancer — dibuat dengan HTML5, CSS3 &amp; Vanilla JS.</p>
+</footer>
+
+<!-- ===================== OVERLAYS ===================== -->
+<div class="lightbox" id="lightbox" hidden>
+  <button class="lightbox__close" id="lightboxClose" type="button" aria-label="Tutup">✕</button>
+  <img src="" alt="Preview penuh" id="lightboxImg" />
+</div>
+
+<div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+<canvas id="confettiCanvas" aria-hidden="true"></canvas>
+
+<script src="script.js"></script>
+</body>
+</html>

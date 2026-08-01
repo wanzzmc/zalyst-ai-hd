@@ -1,0 +1,18 @@
+{
+  "name": "zalyst-ai-hd-image-enhancer",
+  "version": "1.0.0",
+  "description": "AI HD Image Enhancer - Neo Brutalism web app powered by Vercel Serverless Functions",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "node-fetch": "^2.7.0",
+    "formidable": "^3.5.1"
+  },
+  "engines": {
+    "node": ">=18.x"
+  }
+}

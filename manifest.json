@@ -1,0 +1,16 @@
+{
+  "name": "Zalyst AI HD Image Enhancer",
+  "short_name": "Zalyst AI HD",
+  "description": "Pertajam gambar burammu jadi HD dengan 4 model AI berbeda.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B0F1A",
+  "theme_color": "#0B0F1A",
+  "icons": [
+    {
+      "src": "/assets/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
