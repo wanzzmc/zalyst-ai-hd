@@ -5,10 +5,10 @@
 const fetch = require("node-fetch");
 
 const MODEL_ENDPOINTS = {
-  hdv1: "https://api-faa.my.id/faa/superhd",
-  hdv2: "https://api-faa.my.id/faa/hdv2",
-  hdv3: "https://api-faa.my.id/faa/hdv3",
-  hdv4: "https://api-faa.my.id/faa/hdv4",
+  hdv1: { url: "https://api-faa.my.id/faa/superhd", param: "url" },
+  hdv2: { url: "https://api-faa.my.id/faa/hdv2", param: "url" },
+  hdv3: { url: "https://api-faa.my.id/faa/hdv3", param: "image" },
+  hdv4: { url: "https://api-faa.my.id/faa/hdv4", param: "image" },
 };
 
 // Rate limiter sederhana (per instance), sama pola dengan upload.js
@@ -101,11 +101,16 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const endpoint = `${MODEL_ENDPOINTS[model]}?url=${encodeURIComponent(
-      image
-    )}`;
+    const { url: endpoint, param } = MODEL_ENDPOINTS[model];
+    const apiUrl = `${endpoint}?${param}=${encodeURIComponent(image)}`;
 
-    const aiResponse = await fetch(endpoint, { method: "GET" });
+    const aiResponse = await fetch(apiUrl, { 
+      method: "GET",
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; ZalystAI/1.0)',
+        'Accept': 'image/*,application/json;q=0.9,*/*;q=0.8'
+      }
+    });
 
     if (!aiResponse.ok) {
       const errText = await aiResponse.text().catch(() => "");
@@ -122,11 +127,20 @@ module.exports = async function handler(req, res) {
     let resultUrl = null;
 
     if (contentType.includes("application/json")) {
+      // API mengembalikan JSON error atau response
       const data = await aiResponse.json();
-      resultUrl =
-        data.result || data.url || data.data?.url || data.image || null;
+      resultUrl = data.result || data.url || data.data?.url || data.image || null;
 
       if (!resultUrl) {
+        // Cek apakah JSON error response
+        if (data.status === false && data.error) {
+          res.status(502).json({
+            success: false,
+            error: "AI_PROCESSING_FAILED",
+            message: data.error,
+          });
+          return;
+        }
         res.status(502).json({
           success: false,
           error: "AI_PROCESSING_FAILED",
@@ -134,10 +148,20 @@ module.exports = async function handler(req, res) {
         });
         return;
       }
+    } else if (contentType.startsWith("image/")) {
+      // API mengembalikan gambar langsung (binary) -> gunakan URL endpoint sebagai resultUrl
+      // Frontend bisa tampilkan gambar langsung dari URL ini
+      resultUrl = apiUrl;
     } else {
-      // Endpoint mengembalikan gambar langsung -> gunakan URL endpoint itu
-      // sendiri sebagai referensi hasil (browser/frontend dapat menampilkannya).
-      resultUrl = endpoint;
+      // Unknown content type, coba baca sebagai text
+      const text = await aiResponse.text().catch(() => "");
+      console.error("Unknown AI response type:", contentType, text.substring(0, 200));
+      res.status(502).json({
+        success: false,
+        error: "AI_PROCESSING_FAILED",
+        message: "Format respons AI tidak dikenali.",
+      });
+      return;
     }
 
     res.status(200).json({
