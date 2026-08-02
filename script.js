@@ -11,6 +11,45 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const HISTORY_KEY = 'zalyst_hd_history';
 const MAX_HISTORY_ITEMS = 30;
 
+// ------------------------- Image Compression -------------------------
+// Vercel Hobby plan has 4.5MB body limit. Compress image client-side
+// to keep uploads small (max 2000px, JPEG quality 0.85).
+function compressImage(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const MAX_DIM = 2000;
+      let { width, height } = img;
+      if (width > MAX_DIM || height > MAX_DIM) {
+        const scale = MAX_DIM / Math.max(width, height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob((blob) => {
+        URL.revokeObjectURL(url);
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(new Error('Compression failed'));
+        }
+      }, 'image/jpeg', 0.85);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Failed to load image'));
+    };
+    img.src = url;
+  });
+}
+
+
+
 // ------------------------- DOM refs -------------------------
 const uploadZone = document.getElementById('uploadZone');
 const fileInput = document.getElementById('fileInput');
@@ -55,6 +94,7 @@ const confettiCanvas = document.getElementById('confettiCanvas');
 
 // ------------------------- State -------------------------
 let currentFile = null;
+let currentFileName = null;
 let currentGithubUrl = null;
 let currentResultUrl = null;
 let isProcessing = false;
@@ -84,7 +124,7 @@ function escapeHtml(str) {
 // =========================================================
 // FILE VALIDATION + PREVIEW
 // =========================================================
-function handleFileSelected(file) {
+async function handleFileSelected(file) {
   if (!file) return;
 
   if (!ALLOWED_TYPES.includes(file.type)) {
@@ -97,16 +137,33 @@ function handleFileSelected(file) {
     return;
   }
 
-  currentFile = file;
+  enhanceBtn.disabled = true;
+  currentFile = null;
+
   const reader = new FileReader();
   reader.onload = (e) => {
     previewImg.src = e.target.result;
     uploadZoneEmpty.hidden = true;
     uploadZonePreview.hidden = false;
-    enhanceBtn.disabled = false;
   };
   reader.onerror = () => showToast('Failed to read image file', 'error');
   reader.readAsDataURL(file);
+
+  // Compress for upload (Vercel 4.5MB body limit) - preview keeps original
+  try {
+    const compressed = await compressImage(file);
+    if (compressed && compressed.size < file.size) {
+      currentFile = compressed;
+    } else {
+      currentFile = file;
+    }
+    currentFileName = file.name;
+  } catch (err) {
+    console.error('Compression error:', err);
+    currentFile = file;
+    currentFileName = file.name;
+  }
+  enhanceBtn.disabled = false;
 }
 
 uploadZone.addEventListener('click', () => fileInput.click());
@@ -161,6 +218,7 @@ clearImageBtn.addEventListener('click', (e) => {
 
 function resetUpload() {
   currentFile = null;
+  currentFileName = null;
   fileInput.value = '';
   previewImg.src = '';
   uploadZoneEmpty.hidden = false;
